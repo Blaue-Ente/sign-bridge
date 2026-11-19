@@ -1,0 +1,9 @@
+{
+  "name": "sign-bridge",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Text to fingerspelling animation and webcam fingerspelling recognition (prototype).",
+  "scripts": {
+    "test": "node --test"
+  }
+}

@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SignBridge</title>
+  <meta name="description" content="Deutsches Fingeralphabet (DGS): Text in Gebärden zeigen und Gebärden-Buchstaben per Kamera erkennen (Prototyp).">
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip" href="#main" data-i18n="skipLink"></a>
+  <header class="top">
+    <div class="brand">
+      <div class="logo" aria-hidden="true">
+        <svg viewBox="0 0 32 32" width="32" height="32"><path d="M9 26V15a2.5 2.5 0 0 1 5 0v-5a2.5 2.5 0 0 1 5 0v5a2.5 2.5 0 0 1 5 0v9c0 3.3-2.7 6-6 6h-3c-3.3 0-5-2.1-5-5z" fill="currentColor"/></svg>
+      </div>
+      <div>
+        <h1>SignBridge</h1>
+        <p class="tagline" data-i18n="tagline"></p>
+      </div>
+    </div>
+    <div class="controls">
+      <label class="field">
+        <span data-i18n="languageLabel"></span>
+        <select id="langSelect">
+          <option value="de">Deutsch</option>
+          <option value="en">English</option>
+        </select>
+      </label>
+      <div class="field">
+        <span id="textSizeLabel" data-i18n="textSize"></span>
+        <div class="seg" role="group" aria-labelledby="textSizeLabel">
+          <button id="fontDown" type="button" data-i18n-aria="textSmaller">A−</button>
+          <button id="fontUp" type="button" data-i18n-aria="textLarger">A+</button>
+        </div>
+      </div>
+      <label class="field check">
+        <span data-i18n="highContrast"></span>
+        <input id="contrastToggle" type="checkbox">
+      </label>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button class="tab active" role="tab" data-tab="talk" aria-selected="true" data-i18n="tabTalk"></button>
+    <button class="tab" role="tab" data-tab="text" aria-selected="false" data-i18n="tabText"></button>
+    <button class="tab" role="tab" data-tab="sign" aria-selected="false" data-i18n="tabSign"></button>
+    <button class="tab" role="tab" data-tab="alphabet" aria-selected="false" data-i18n="tabAlphabet"></button>
+  </nav>
+
+  <main id="main" tabindex="-1">
+    <!-- Conversation (main screen) -->
+    <section id="panel-talk" class="panel" role="tabpanel">
+      <div class="card talk-display">
+        <p id="talkWho" class="talk-who"></p>
+        <p id="talkBig" class="talk-big" aria-live="polite" aria-atomic="true"></p>
+        <div class="row">
+          <button id="talkSpeakAgain" type="button" data-i18n="speakAgain"></button>
+          <button id="talkDgs" type="button" aria-expanded="false" aria-controls="dgsBox" data-i18n="showDgs"></button>
+          <button id="talkFingerspell" type="button" data-i18n="showFingerspelling"></button>
+        </div>
+        <div id="dgsBox" class="dgs-box" hidden>
+          <video id="dgsVideo" controls playsinline preload="metadata" hidden></video>
+          <p id="dgsStatus" class="status" aria-live="polite"></p>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="card side side-hearing">
+          <h2 data-i18n="sideHearing"></h2>
+          <p class="muted small" data-i18n="sideHearingHint"></p>
+          <label class="sr-only" for="hearingInput" data-i18n="sideHearing"></label>
+          <textarea id="hearingInput" rows="3" data-i18n-placeholder="hearingPlaceholder"></textarea>
+          <div class="row">
+            <button id="hearingSend" class="primary" type="button" data-i18n="send"></button>
+            <button id="hearingMic" class="mic" type="button" aria-pressed="false"></button>
+          </div>
+          <p id="micStatus" class="status" aria-live="polite"></p>
+          <p class="label small" data-i18n="quickPhrases"></p>
+          <div id="hearingPhrases" class="phrases"></div>
+        </div>
+        <div class="card side side-deaf">
+          <h2 data-i18n="sideDeaf"></h2>
+          <p class="muted small" data-i18n="sideDeafHint"></p>
+          <label class="sr-only" for="deafInput" data-i18n="sideDeaf"></label>
+          <textarea id="deafInput" rows="3" data-i18n-placeholder="deafPlaceholder"></textarea>
+          <div class="row">
+            <button id="deafSend" class="primary" type="button" data-i18n="send"></button>
+            <button id="deafFromSign" type="button" data-i18n="fromSign"></button>
+          </div>
+          <label class="check"><input id="autoSpeak" type="checkbox"> <span data-i18n="autoSpeak"></span></label>
+          <p class="label small" data-i18n="quickPhrases"></p>
+          <div id="deafPhrases" class="phrases"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="row between">
+          <h2 data-i18n="historyLabel"></h2>
+          <div class="row">
+            <button id="historyCopy" type="button" data-i18n="historyCopy"></button>
+            <button id="historyClear" type="button" data-i18n="historyClear"></button>
+          </div>
+        </div>
+        <ol id="history" class="history" reversed></ol>
+        <p id="historyStatus" class="status" aria-live="polite"></p>
+      </div>
+      <p class="muted small" data-i18n="talkPrivacy"></p>
+    </section>
+
+    <!-- Spelling (fingerspelling, not a DGS translation) -->
+    <section id="panel-text" class="panel" role="tabpanel" hidden>
+      <p class="draft" data-i18n="spellNotice"></p>
+      <div class="grid">
+        <div class="card">
+          <label class="label" for="textInput" data-i18n="textLabel"></label>
+          <textarea id="textInput" rows="3" data-i18n-placeholder="textPlaceholder"></textarea>
+          <div class="row">
+            <button id="playBtn" class="primary" type="button" data-i18n="play"></button>
+            <button id="replayBtn" type="button" data-i18n="replay"></button>
+            <button id="stopBtn" type="button" data-i18n="stop"></button>
+          </div>
+          <label class="slider">
+            <span data-i18n="speed"></span>
+            <span id="speedValue">1×</span>
+            <input id="speedInput" type="range" min="0.5" max="2" step="0.25" value="1">
+          </label>
+          <p id="textStatus" class="status" aria-live="polite"></p>
+          <p id="skippedNote" class="muted" hidden></p>
+        </div>
+        <div class="card stage">
+          <canvas id="handCanvas" width="480" height="480" role="img" aria-label="Handgebärde"></canvas>
+          <div id="currentLabel" class="big" aria-live="off"></div>
+          <p id="motionNote" class="muted small" data-i18n="motionNote" hidden></p>
+        </div>
+      </div>
+      <div class="card">
+        <p class="label" data-i18n="sequenceLabel"></p>
+        <div id="sequence" class="frames"></div>
+        <div class="row">
+          <button id="savePngBtn" type="button" data-i18n="savePng"></button>
+          <button id="saveGifBtn" type="button" data-i18n="saveGif"></button>
+        </div>
+        <progress id="exportProgress" class="export-progress" max="1" value="0" data-i18n-aria="exportProgress" hidden></progress>
+        <p id="exportStatus" class="status" aria-live="polite"></p>
+        <p class="muted small" data-i18n="exportPrivacy"></p>
+      </div>
+    </section>
+
+    <!-- Sign to text -->
+    <section id="panel-sign" class="panel" role="tabpanel" hidden>
+      <p id="signLimits" class="draft" data-i18n="signLimits"></p>
+      <div class="grid">
+        <div class="card">
+          <div class="cam">
+            <video id="video" playsinline muted></video>
+            <canvas id="overlay" width="640" height="480"></canvas>
+            <div id="camPlaceholder" class="cam-placeholder" data-i18n="camIdle"></div>
+          </div>
+          <div class="row">
+            <button id="camBtn" class="primary" type="button" data-i18n="camStart"></button>
+          </div>
+          <p id="camStatus" class="status" aria-live="polite"></p>
+          <div class="live">
+            <span class="label" data-i18n="liveLabel"></span>
+            <strong id="liveText"></strong>
+          </div>
+          <div class="bar" aria-hidden="true"><span id="liveBar"></span></div>
+        </div>
+        <div class="card">
+          <p class="label" data-i18n="outputLabel"></p>
+          <div id="output" class="output" aria-live="polite"></div>
+          <div class="row">
+            <button id="spaceBtn" type="button" data-i18n="space"></button>
+            <button id="backspaceBtn" type="button" data-i18n="backspace"></button>
+            <button id="clearBtn" type="button" data-i18n="clear"></button>
+            <button id="copyBtn" type="button" data-i18n="copy"></button>
+          </div>
+          <p id="copyStatus" class="status" aria-live="polite"></p>
+        </div>
+      </div>
+
+      <details class="card calibration">
+        <summary data-i18n="calibTitle"></summary>
+        <p class="muted" data-i18n="calibHint"></p>
+        <p class="muted small" data-i18n="calibUsing"></p>
+        <div class="row">
+          <label class="field">
+            <span data-i18n="calibShape"></span>
+            <select id="calibShape"></select>
+          </label>
+          <button id="calibRecordBtn" class="primary" type="button" data-i18n="calibRecord"></button>
+          <button id="calibClearBtn" type="button" data-i18n="calibClear"></button>
+          <button id="calibResetBtn" type="button" data-i18n="calibResetAll"></button>
+        </div>
+        <p id="calibStatus" class="status" aria-live="polite"></p>
+        <p id="calibCounts" class="muted small"></p>
+      </details>
+    </section>
+
+    <!-- Alphabet chart -->
+    <section id="panel-alphabet" class="panel" role="tabpanel" hidden>
+      <p class="muted" data-i18n="alphabetHint"></p>
+      <div id="alphabetGrid" class="cards"></div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <p class="muted small" data-i18n="disclaimer"></p>
+  </footer>
+
+  <script src="src/core/hand.js"></script>
+  <script src="src/core/shapes.js"></script>
+  <script src="src/core/translator.js"></script>
+  <script src="src/core/recognizer.js"></script>
+  <script src="src/core/conversation.js"></script>
+  <script src="src/core/phrases.js"></script>
+  <script src="src/core/exporter.js"></script>
+  <script src="src/core/gif.js"></script>
+  <script src="src/ui/i18n.js"></script>
+  <script src="src/ui/renderer.js"></script>
+  <script src="src/data/dictionary.js"></script>
+  <script src="src/data/dgs-phrases.js"></script>
+  <script src="src/ui/app.js"></script>
+  <script src="src/ui/export.js"></script>
+  <script src="src/ui/conversation.js"></script>
+</body>
+</html>
